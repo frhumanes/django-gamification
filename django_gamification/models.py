@@ -45,6 +45,9 @@ class Category(models.Model):
     """
     name = models.CharField(max_length=128, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    
+    def __unicode__(self):
+        return self.name
 
 
 class BadgeDefinition(models.Model):
@@ -108,6 +111,9 @@ class BadgeDefinition(models.Model):
                 badge.category = self.category
                 badge.points = self.points
                 badge.save()
+                
+    def __unicode__(self):
+        return self.name
 
 
 class Progression(models.Model):
@@ -190,7 +196,7 @@ class Badge(models.Model):
     name = models.CharField(max_length=128)
     description = models.TextField(null=True, blank=True)
     progression = models.ForeignKey(Progression, null=True)
-    next_badge = models.ForeignKey('self', null=True)
+    next_badge = models.ForeignKey('self', null=True, blank=True)
     category = models.ForeignKey(Category, null=True)
     points = models.BigIntegerField(null=True, blank=True)
 
@@ -229,6 +235,9 @@ class Badge(models.Model):
                     amount=(-self.points),
                     interface=self.interface
                 )
+                
+    def __unicode__(self):
+        return self.name
 
 
 class UnlockableDefinition(models.Model):
@@ -273,6 +282,9 @@ class UnlockableDefinition(models.Model):
                 description=self.description,
                 points_required=self.points_required
             )
+            
+    def __unicode__(self):
+        return self.name
 
 
 class UnlockableManager(models.Manager):
@@ -312,3 +324,6 @@ class Unlockable(models.Model):
 
     default_objects = models.Manager()
     objects = UnlockableManager()
+    
+    def __unicode__(self):
+        return self.name
