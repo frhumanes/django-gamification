@@ -12,8 +12,12 @@ class GamificationInterface(models.Model):
 
     @property
     def points(self):
-        return PointChange.objects.filter(interface=self).aggregate(
-                                            Sum('amount'))['amount__sum'] or 0
+        return (
+            PointChange.objects.filter(interface=self).aggregate(Sum("amount"))[
+                "amount__sum"
+            ]
+            or 0
+        )
 
     def reset(self):
         """
@@ -43,9 +47,10 @@ class Category(models.Model):
     """
 
     """
+
     name = models.CharField(max_length=128, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
-    
+
     def __unicode__(self):
         return self.name
 
@@ -54,10 +59,13 @@ class BadgeDefinition(models.Model):
     """
 
     """
+
     name = models.CharField(max_length=128)
     description = models.TextField(null=True, blank=True)
     progression_target = models.IntegerField(null=True, blank=True)
-    next_badge = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL)
+    next_badge = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL
+    )
     category = models.ForeignKey(Category, null=True, on_delete=models.SET_NULL)
     points = models.BigIntegerField(null=True, blank=True)
 
@@ -104,14 +112,13 @@ class BadgeDefinition(models.Model):
                         badge.progression.save()
                 if self.next_badge:
                     badge.next_badge = Badge.objects.filter(
-                        interface=badge.interface,
-                        badge_definition=self.next_badge
+                        interface=badge.interface, badge_definition=self.next_badge
                     ).first()
 
                 badge.category = self.category
                 badge.points = self.points
                 badge.save()
-                
+
     def __unicode__(self):
         return self.name
 
@@ -120,6 +127,7 @@ class Progression(models.Model):
     """
 
     """
+
     progress = models.IntegerField(default=0, null=False, blank=False)
     target = models.IntegerField(null=False, blank=False)
 
@@ -135,6 +143,7 @@ class PointChange(models.Model):
     """
 
     """
+
     amount = models.BigIntegerField(null=False, blank=False)
     interface = models.ForeignKey(GamificationInterface, on_delete=models.CASCADE)
     time = models.DateTimeField(auto_now_add=True)
@@ -144,6 +153,7 @@ class BadgeManager(models.Manager):
     """
 
     """
+
     def create_badge(self, definition, interface):
         """
         Creates a new badge from a badge definition and a gamification
@@ -158,17 +168,16 @@ class BadgeManager(models.Manager):
             interface=interface,
             name=definition.name,
             description=definition.description,
-            progression=Progression.objects.create(
-                target=definition.progression_target)
-            if definition.progression_target else None,
+            progression=Progression.objects.create(target=definition.progression_target)
+            if definition.progression_target
+            else None,
             category=definition.category,
             points=definition.points,
-            badge_definition=definition
+            badge_definition=definition,
         )
         if definition.next_badge:
             badge.next_badge = self.filter(
-                interface=interface,
-                badge_definition=definition.next_badge
+                interface=interface, badge_definition=definition.next_badge
             ).first()
             badge.save()
         return badge
@@ -178,16 +187,21 @@ class AcquiredBadgesManager(BadgeManager):
     """
 
     """
+
     def get_queryset(self):
-        return super(AcquiredBadgesManager, self).get_queryset().filter(
-                                                acquired=True, revoked=False)
+        return (
+            super(AcquiredBadgesManager, self)
+            .get_queryset()
+            .filter(acquired=True, revoked=False)
+        )
 
 
 class Badge(models.Model):
     """
 
     """
-    badge_definition = models.ForeignKey(BadgeDefinition)
+
+    badge_definition = models.ForeignKey(BadgeDefinition, on_delete=models.CASCADE)
     acquired = models.BooleanField(default=False)
     revoked = models.BooleanField(default=False)
     interface = models.ForeignKey(GamificationInterface, on_delete=models.CASCADE)
@@ -196,7 +210,9 @@ class Badge(models.Model):
     name = models.CharField(max_length=128)
     description = models.TextField(null=True, blank=True)
     progression = models.ForeignKey(Progression, null=True, on_delete=models.SET_NULL)
-    next_badge = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL)
+    next_badge = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL
+    )
     category = models.ForeignKey(Category, null=True, on_delete=models.SET_NULL)
     points = models.BigIntegerField(null=True, blank=True)
 
@@ -214,28 +230,21 @@ class Badge(models.Model):
         if self.revoked:
             self.revoked = False
             if self.points is not None:
-                PointChange.objects.create(
-                    amount=self.points,
-                    interface=self.interface
-                )
+                PointChange.objects.create(amount=self.points, interface=self.interface)
 
         elif not self.progression or self.progression.finished:
             self.acquired = True
             if self.points is not None:
-                PointChange.objects.create(
-                    amount=self.points,
-                    interface=self.interface
-                )
+                PointChange.objects.create(amount=self.points, interface=self.interface)
 
     def force_revoke(self):
         if self.acquired:
             self.revoked = True
             if self.points is not None:
                 PointChange.objects.create(
-                    amount=(-self.points),
-                    interface=self.interface
+                    amount=(-self.points), interface=self.interface
                 )
-                
+
     def __unicode__(self):
         return self.name
 
@@ -244,6 +253,7 @@ class UnlockableDefinition(models.Model):
     """
 
     """
+
     name = models.CharField(max_length=128)
     description = models.TextField(null=True, blank=True)
     points_required = models.BigIntegerField(null=False, blank=False)
@@ -280,9 +290,9 @@ class UnlockableDefinition(models.Model):
             Unlockable.objects.filter(unlockable_definition=self).update(
                 name=self.name,
                 description=self.description,
-                points_required=self.points_required
+                points_required=self.points_required,
             )
-            
+
     def __unicode__(self):
         return self.name
 
@@ -291,6 +301,7 @@ class UnlockableManager(models.Manager):
     """
 
     """
+
     def create_unlockable(self, definition, interface):
         """
         Creates a new unlockable from a definition and a gamification
@@ -313,7 +324,10 @@ class Unlockable(models.Model):
     """
 
     """
-    unlockable_definition = models.ForeignKey(UnlockableDefinition, on_delete=models.CASCADE)
+
+    unlockable_definition = models.ForeignKey(
+        UnlockableDefinition, on_delete=models.CASCADE
+    )
     acquired = models.BooleanField(default=False)
     interface = models.ForeignKey(GamificationInterface, on_delete=models.CASCADE)
 
@@ -324,6 +338,6 @@ class Unlockable(models.Model):
 
     default_objects = models.Manager()
     objects = UnlockableManager()
-    
+
     def __unicode__(self):
         return self.name
